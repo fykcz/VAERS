@@ -1,0 +1,69 @@
+---
+title: "R Notebook"
+output: html_document
+---
+
+Zkusím načíst VAERS data z CSV do jednoho dataframu
+```{r libraries}
+library(tidyverse)
+library(data.table)
+library(lubridate)
+```
+
+
+```{r FileList}
+files = list.files(path = ".", pattern = "*VAERSDATA.csv")
+```
+
+```{r read_data}
+read_plus <- function(flnm)
+{
+  read_csv(flnm, col_types = cols(.default = "c")) %>% 
+    mutate(filename = flnm,
+           data_year = substr(filename, 8, 11))
+}
+
+main_data <-
+  list.files(pattern = "*VAERSDATA.csv",
+             path = "./data/",
+             full.names = T) %>% 
+  map_df(~read_plus(.))
+
+symptomps <-
+  list.files(pattern = "*VAERSSYMPTOMS.csv",
+             path = "./data/",
+             full.names = T) %>% 
+  map_df(~read_plus(.))
+
+vaxes <-
+  list.files(pattern = "*VAERSVAX.csv",
+             path = "./data/",
+             full.names = T) %>% 
+  map_df(~read_plus(.))
+
+```
+
+```{r change_datatypes}
+main_data$RECVDATE = mdy(main_data$RECVDATE)
+main_data$AGE_YRS = as.factor(main_data$AGE_YRS)
+main_data$VAX_DATE = mdy(main_data$VAX_DATE)
+main_data$data_year = as.factor(main_data$data_year)
+
+symptomps$data_year = as.factor(symptomps$data_year)
+```
+
+```{r merge_data}
+big_data <- main_data %>%
+  merge(symptomps, by="VAERS_ID", all.x = T) %>%
+  merge(vaxes, by="VAERS_ID", all.x = T) %>%
+  subset(select=c(VAERS_ID, RECVDATE, AGE_YRS, SEX, SYMPTOM_TEXT, DIED, VAX_DATE, NUMDAYS, LAB_DATA,
+                  SYMPTOM1, SYMPTOM2,
+                  VAX_TYPE, VAX_MANU, VAX_LOT, VAX_DOSE_SERIES, VAX_NAME,
+                  data_year.x)) %>%
+  rename(DATA_YEAR = data_year.x)
+```
+
+```{r export_big_data}
+write.table(head(big_data), "bigdata.csv", quote = F, sep = ';', na = "NA", row.names = F, dec=',')
+
+```
