@@ -1,49 +1,40 @@
 ---
-title: "R Notebook"
+title: "VAXES"
+author: "Filip Yaghob"
 output: html_document
 ---
 
-Zkusím načíst VAERS data z CSV do jednoho dataframu
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
 ```{r libraries}
 library(tidyverse)
 library(data.table)
 library(lubridate)
 ```
 
-```{r include_scripts}
-#if(!exists("foo", mode="function")) source("util.R")
-```
-
-```{r FileList, purl=FALSE}
-#files = list.files(path = "./data/", pattern = "*VAERSDATA.csv")
-```
-
-```{r read_data}
+```{r function_read_plus}
 read_plus <- function(flnm)
 {
   read_csv(flnm, col_types = cols(.default = "c")) %>% 
     mutate(filename = flnm,
            data_year = substr(filename, 8, 11))
 }
+```
 
-main_data <-
-  list.files(pattern = "*VAERSDATA.csv",
-             path = "./data/",
-             full.names = T) %>% 
-  map_df(~read_plus(.))
-
-#symptomps <-
-#  list.files(pattern = "*VAERSSYMPTOMS.csv",
-#             path = "./data/",
-#             full.names = T) %>% 
-#  map_df(~read_plus(.))
-
+``` {r load_data}
 vaxes <-
   list.files(pattern = "*VAERSVAX.csv",
              path = "./data/",
              full.names = T) %>% 
   map_df(~read_plus(.))
 
+main_data <-
+  list.files(pattern = "*VAERSDATA.csv",
+             path = "./data/",
+             full.names = T) %>% 
+  map_df(~read_plus(.))
 ```
 
 ```{r change_datatypes}
@@ -65,16 +56,10 @@ big_data <- vaxes %>%
   mutate(VAX_YEAR = year(RECVDATE))
 ```
 
-```{r merge_data}
-big_data <- main_data %>%
-#  merge(symptomps, by="VAERS_ID", all.x = T) %>%
-  merge(vaxes, by="VAERS_ID", all.x = T) %>%
-  subset(select=c(VAERS_ID, RECVDATE, AGE_YRS, SEX, SYMPTOM_TEXT, DIED, VAX_DATE, NUMDAYS, LAB_DATA,
-#                  SYMPTOM1, SYMPTOM2,
-                  VAX_TYPE, VAX_MANU, VAX_LOT, VAX_DOSE_SERIES, VAX_NAME,
-                  data_year.x)) %>%
-  rename(DATA_YEAR = data_year.x) %>%
-  mutate(VAX_YEAR = year(RECVDATE))
+```{r typy_vakcin}
+types <- vaxes %>%
+  group_by(VAX_TYPE) %>%
+  summarise(countof = n(), .groups="keep")
 ```
 
 ```{r compute_groups, echo=FALSE, warning=FALSE}
