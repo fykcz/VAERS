@@ -1,17 +1,37 @@
 ---
-title: "VAXES"
+title: "Analýza dat VAERS"
 author: "Filip Yaghob"
-output: html_document
+output: 
+  html_document: 
+    theme: simplex
 ---
 
+** Toto není studie, ale pouze analýza dat bez jakéhokoli zaměření. **
+
+Zdrojová data jsou veřejně dostupná, viz. [VAERS]https://vaers.hhs.gov/data/datasets.html.
+
+Zdrojový kód zpracování dat je také veřejně dostupný, viz. [GitHub]https://github.com/fykcz/vaers.git.
+
+Zpracuji dva typy souborů, `VAERSVAX` a `VAERSDATA`. Popis souborů a jejich obsahů je na stránce VAERS.
+Data v těchto souborech jsou svázána přes identifikátor `VAERS_ID`, kde primární data jsou v souboru `VAERSDATA`,
+rozšiřující jsou v `VAERSVAX`.
+Data jsou v souborech pro jednotlivé roky, evidence začíná rokem 1990. Název souboru je tvořen letopočtem a názvem dat: `YYYYVAERSDATA.csv`.
+Načtu všechny soubory z podadresáře `data`, z názvu souboru vyčtu letopočet a data spojím v jeden dataframe,
+resp. každý typ dat má svůj dataframe.
+
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE)
 ```
 
-```{r libraries}
-library(tidyverse)
-library(data.table)
-library(lubridate)
+
+```{r libraries, message=FALSE}
+options(tidyverse.quiet = TRUE)
+suppressPackageStartupMessages(library(tidyverse))
+#library(tidyverse)
+options(dplyr.summarise.inform = FALSE)
+
+#suppressMessages(library(lubridate))
+suppressPackageStartupMessages(library(lubridate))
 ```
 
 ```{r function_read_plus}
@@ -37,6 +57,15 @@ main_data <-
   map_df(~read_plus(.))
 ```
 
+```{r}
+printf <- function(...) invisible(print(sprintf(...)))
+```
+
+```{r}
+printf("VAERSDATA rows: %d", NROW(main_data))
+printf("VAERSVAX rows: %d", NROW(vaxes))
+```
+
 ```{r change_datatypes}
 main_data$RECVDATE = mdy(main_data$RECVDATE)
 main_data$AGE_YRS = as.factor(main_data$AGE_YRS)
@@ -47,25 +76,49 @@ main_data$data_year = as.factor(main_data$data_year)
 ```
 
 ```{r merge_vax_to_data}
+typGroupA <- c("ADEN", "ANTH")
+typGroupDTX <- c("DT", "DTAP", "DTAPH")
+
 big_data <- vaxes %>%
   merge(main_data, by="VAERS_ID", all.x = T) %>%
   select(VAERS_ID, RECVDATE, AGE_YRS, SEX, SYMPTOM_TEXT, DIED, VAX_DATE, NUMDAYS, LAB_DATA,
          VAX_TYPE, VAX_MANU, VAX_LOT, VAX_DOSE_SERIES, VAX_NAME,
          data_year.y) %>%
   rename(DATA_YEAR = data_year.y) %>%
-  mutate(VAX_YEAR = year(RECVDATE))
+  mutate(VAX_YEAR = year(RECVDATE)) %>%
+  mutate(diseaseGroup = ifelse(VAX_TYPE %in% typGroupA, "A",
+                               ifelse(VAX_TYPE %in% typGroupDTX, "DTX",
+                                      "UNK")))
+
 ```
 
+## Počty hlášení k jednotlivým typům vakcín
+Zatím detailně podle typu vakcíny, bez grupování do větších celků podle více typů onemocnění/vakcín.
 ```{r typy_vakcin}
 types <- vaxes %>%
   group_by(VAX_TYPE) %>%
-  summarise(countof = n(), .groups="keep")
+  summarise(countof = n()) %>%
+  arrange(countof)
+knitr::kable(types)
 ```
+
 
 ```{r compute_groups, echo=FALSE, warning=FALSE}
 groups <- big_data %>%
-  group_by(VAX_YEAR, VAX_TYPE, VAX_MANU) %>%
-  summarise(countof = n())
+  group_by(VAX_YEAR, VAX_TYPE) %>%
+  summarise(NumOfInc = n())
+```
+
+```{r grouping_by_disease}
+
+```
+
+
+```{r pivoting}
+pw <- groups %>%
+  arrange(VAX_TYPE) %>%
+  pivot_wider(id_cols = VAX_YEAR, names_from = VAX_TYPE, values_from = NumOfInc) %>%
+  arrange(VAX_YEAR)
 ```
 
 ```{r groups_per_years}
@@ -75,6 +128,6 @@ gpy <- groups %>%
 ```
 
 ```{r export_big_data}
-write.table(head(big_data), "bigdata.csv", quote = F, sep = ';', na = "NA", row.names = F, dec=',')
+#write.table(head(big_data), "bigdata.csv", quote = F, sep = ';', na = "NA", row.names = F, dec=',')
 
 ```
