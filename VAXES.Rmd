@@ -8,9 +8,9 @@ output:
 
 ** Toto není studie, ale pouze analýza dat bez jakéhokoli zaměření. **
 
-Zdrojová data jsou veřejně dostupná, viz. [VAERS]https://vaers.hhs.gov/data/datasets.html.
+Zdrojová data jsou veřejně dostupná, viz. [VAERS](https://vaers.hhs.gov/data/datasets.html).
 
-Zdrojový kód zpracování dat je také veřejně dostupný, viz. [GitHub]https://github.com/fykcz/vaers.git.
+Zdrojový kód zpracování dat je také veřejně dostupný, viz. [GitHub](https://github.com/fykcz/vaers.git).
 
 Zpracuji dva typy souborů, `VAERSVAX` a `VAERSDATA`. Popis souborů a jejich obsahů je na stránce VAERS.
 Data v těchto souborech jsou svázána přes identifikátor `VAERS_ID`, kde primární data jsou v souboru `VAERSDATA`,
