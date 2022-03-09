@@ -7,3 +7,6 @@ data/
 *.pdf
 *.csv
 *.html
+*.feather
+*.h5
+*.tsv
