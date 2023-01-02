@@ -10,3 +10,4 @@ data/
 *.feather
 *.h5
 *.tsv
+*.parquet
